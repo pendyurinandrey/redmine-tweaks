@@ -42,3 +42,10 @@ button.rt-edit-description svg { width: 16px; height: 16px; }
 
 /* Issue without a description: a slim row (the divider above is added by the script) */
 .rt-edit-description-empty { margin-top: 0.6em; }
+
+/* Feature: clickable task-list checkboxes in the description */
+input.task-list-item-checkbox.rt-task-toggle { cursor: pointer; }
+input.task-list-item-checkbox.rt-task-toggle:disabled { cursor: progress; opacity: 0.6; }
+@media (pointer: coarse) {
+  input.task-list-item-checkbox.rt-task-toggle { width: 1.35em; height: 1.35em; }
+}

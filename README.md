@@ -7,7 +7,7 @@ Requires Redmine 6.0 or newer. Tested on Redmine 6.1.4 with the default set of p
 
 ## Features
 
-### Quick edit description (v0.1.0)
+### Quick edit description
 
 On an issue page a **pencil** appears next to the **Description** label. One click opens Redmine's edit form, expands the
 description editor (normally hidden behind a second "Edit" link), scrolls to it and puts the cursor at the end of the text.
@@ -21,6 +21,22 @@ Issues without a description get a slim "Description ✎" row so a description c
   * Redmine's own **Cancel** link: hides the form and keeps what was typed (as before).
   * **Ctrl/Cmd+Enter** in any text area saves (this is Redmine core behavior).
 * Localized: English and Russian (`config/locales`); the texts reach the script from the server, other languages need only a YAML file.
+
+### Clickable checkboxes in the description
+
+Task lists in the description (`- [ ] item` / `- [x] item`, CommonMark) are rendered by Redmine as **disabled** checkboxes, so ticking an
+item means opening the editor, changing `[ ]` to `[x]` by hand and saving. With this feature the checkboxes are **clickable** for users who may
+edit the description: a click flips that marker in the source and submits Redmine's own issue form (the reader stays at the same scroll position).
+
+* It is a normal update: the version lock is checked, the history gets a "Description updated" entry (**every toggle adds one**), notifications work as usual.
+* Only CommonMark text is supported (Textile has no task lists in Redmine).
+* **Safe by construction** — a checkbox stays disabled, exactly as in stock Redmine, when
+  * the user may not edit the description;
+  * the number of `[ ]`/`[x]` markers found in the description source differs from the number of rendered checkboxes, or a state disagrees
+    (for example checkboxes produced by an `{{include}}` macro or unusual code blocks) — the mapping would not be trustworthy;
+  * at click time the issue form has other unsaved changes (a typed comment must not be sent by accident): the click is reverted with a hint.
+* Markers inside fenced code blocks and inline code are ignored, exactly as Redmine does not render them as checkboxes.
+* Localized (English, Russian) like the other messages.
 
 ## Installation
 
@@ -44,8 +60,9 @@ No configuration and no permissions are needed. To remove the plugin, delete the
 
 ## Compatibility notes
 
-The script relies on a few internal identifiers of Redmine's issue page: `#update`, `#issue-form`, `#issue_description`,
-`#issue_description_and_toolbar`, `.description`, the global `showAndScrollTo()`. They have been stable for many releases, but after a
+The scripts rely on a few internal identifiers of Redmine's issue page: `#update`, `#issue-form`, `#issue_description`,
+`#issue_description_and_toolbar`, `#issue_description_wiki`, `.description`, the global `showAndScrollTo()`, and on the markup of task lists
+(`input.task-list-item-checkbox`). They have been stable for many releases, but after a
 major Redmine upgrade run the manual checklist below once.
 
 ## Development and manual test checklist
@@ -62,6 +79,12 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
 7. Links and task-list checkboxes inside the description behave as before (the pencil does not affect them).
 8. A user who can comment but not edit: **no pencil**.
 9. Narrow (phone) width and the Opale theme: the pencil is visible and tappable.
+10. Task lists (a description with nested items, a numbered item, a fenced code block containing `- [ ] text`): the checkboxes are clickable; a click
+    saves, the page returns to the same scroll position, the right item changed, the history has "Description updated".
+11. Type a comment in the form, then click a checkbox: the click is reverted with a hint and nothing is sent.
+12. A user who may not edit the description, and a description whose markers cannot be mapped (an indented code block with `- [ ]`): the checkboxes stay disabled.
+
+Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 
 ## License
 

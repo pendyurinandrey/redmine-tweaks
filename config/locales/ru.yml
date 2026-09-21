@@ -1,3 +1,4 @@
 ru:
   label_tweaks_edit_description: "Редактировать описание"
   text_tweaks_discard_changes: "Отменить несохранённые изменения?"
+  text_tweaks_checklist_unsaved_changes: "В форме задачи есть несохранённые изменения. Сначала сохраните или отмените их, затем переключите чекбокс."

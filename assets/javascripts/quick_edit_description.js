@@ -1,4 +1,4 @@
-/* Redmine Tweaks — feature "quick edit description".
+/* Redmine Tweaks — feature "quick edit description" (needs tweaks_common.js).
  *
  * A pencil next to the "Description" label of the issue page opens Redmine's own edit form, expands the (normally
  * collapsed) description editor, scrolls to it and puts the cursor at the end of the text. Nothing is re-implemented:
@@ -15,26 +15,8 @@
 (function () {
   'use strict';
 
-  var texts = {};
-  try {
-    var meta = document.querySelector('meta[name="redmine-tweaks"]');
-    if (meta) { texts = JSON.parse(meta.getAttribute('content')) || {}; }
-  } catch (e) { /* defaults below */ }
-  function t(key, fallback) { return texts[key] || fallback; }
-
-  // True if any field of the form differs from the values saved on the server (the defaults of the rendered form)
-  function isDirty(form) {
-    return Array.prototype.some.call(form.elements, function (el) {
-      switch (el.type) {
-        case 'hidden': case 'submit': case 'button': case 'reset': return false;
-        case 'checkbox': case 'radio': return el.checked !== el.defaultChecked;
-        case 'file': return !!(el.files && el.files.length);
-        case 'select-one': case 'select-multiple':
-          return Array.prototype.some.call(el.options, function (o) { return o.selected !== o.defaultSelected; });
-        default: return el.value !== el.defaultValue;
-      }
-    });
-  }
+  var t = window.RedmineTweaks.t;
+  var isDirty = window.RedmineTweaks.isDirty;
 
   function autocompleteOpen() {
     var menu = document.querySelector('.tribute-container');
