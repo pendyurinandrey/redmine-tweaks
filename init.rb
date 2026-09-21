@@ -18,3 +18,9 @@ end
 unless WelcomeController.include?(RedmineTweaks::WelcomeControllerPatch)
   WelcomeController.prepend(RedmineTweaks::WelcomeControllerPatch)
 end
+
+# Feature "calendar weeks": the Calendar block of "My page" shows 1-5 weeks (partial in app/views/redmine_tweaks).
+unless Redmine::Helpers::Calendar.include?(RedmineTweaks::CalendarWeeks::CalendarPatch)
+  Redmine::Helpers::Calendar.prepend(RedmineTweaks::CalendarWeeks::CalendarPatch)
+  MyHelper.prepend(RedmineTweaks::CalendarWeeks::MyHelperPatch)
+end

@@ -2,3 +2,6 @@ en:
   label_tweaks_edit_description: "Edit description"
   text_tweaks_discard_changes: "Discard the unsaved changes?"
   text_tweaks_checklist_unsaved_changes: "The issue form has unsaved changes. Save or discard them first, then toggle the checkbox."
+  text_tweaks_x_weeks:
+    one: "1 week"
+    other: "%{count} weeks"

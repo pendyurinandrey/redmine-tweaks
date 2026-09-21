@@ -48,6 +48,16 @@ By default `/` shows Redmine's "Home" page, which on a fresh installation is onl
 * `robots.txt`, the API and every other route are untouched; only `WelcomeController#index` gets a `before_action`.
 * The column order of the blocks on "My page" is a built-in Redmine setting (block menu → *Options* → *Selected columns*), nothing to install for that.
 
+### Calendar block: 1 to 5 weeks
+
+The **Calendar** block of "My page" shows only the current week. With this feature the block gets an **Options** (gear) button with a **Date range** selector: **1 to 5 weeks**,
+starting with the current week (the default is still 1 week, so nothing changes until you choose). The choice is stored per user in the block settings, exactly like the other
+blocks' settings (for example the number of days of the "Spent time" block).
+
+* Idea and the original core patch: [Redmine issue #26525](https://www.redmine.org/issues/26525). It is re-implemented as a plugin patch instead of a core patch, so it survives upgrades and needs no rebuilding of Redmine.
+* Values outside 1..5 are clamped; issues are selected for the whole displayed period and follow the usual visibility rules.
+* Localized (English, Russian).
+
 ## Installation
 
 The repository is called `redmine-tweaks`, but the plugin directory **must be named exactly `redmine_tweaks`** (that is the plugin id), so give the target directory explicitly:
@@ -72,8 +82,9 @@ No configuration and no permissions are needed. To remove the plugin, delete the
 
 The scripts rely on a few internal identifiers of Redmine's issue page: `#update`, `#issue-form`, `#issue_description`,
 `#issue_description_and_toolbar`, `#issue_description_wiki`, `.description`, the global `showAndScrollTo()`, and on the markup of task lists
-(`input.task-list-item-checkbox`). They have been stable for many releases, but after a
-major Redmine upgrade run the manual checklist below once.
+(`input.task-list-item-checkbox`). The start page feature adds a `before_action` to `WelcomeController#index`. The calendar feature **replaces** `MyHelper#render_calendar_block`
+(a copy of the core method plus the number of weeks; the core partial `my/blocks/_calendar` is no longer used) and wraps `Redmine::Helpers::Calendar#initialize`.
+They have been stable for many releases, but after a major Redmine upgrade compare `render_calendar_block` with the plugin's copy and run the manual checklist below once.
 
 ## Development and manual test checklist
 
@@ -95,7 +106,10 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
 12. A user who may not edit the description, and a description whose markers cannot be mapped (an indented code block with `- [ ]`): the checkboxes stay disabled.
 13. Logged in, open `/`: you land on "My page". Logged out: the login page (or the home page if anonymous access is allowed).
 
-An HTTP-level check of item 13 for a running instance: `test/start_page_smoke.sh <base_url> <login> <password>`.
+14. The Calendar block on "My page" has a gear button; choosing 3 weeks and saving shows three week rows without a page reload; an issue due in the third week appears only then.
+    Removing and adding the block again keeps working.
+
+HTTP-level checks for a running instance (use a test account): `test/start_page_smoke.sh <base_url> <login> <password>` (item 13) and `test/calendar_weeks_smoke.sh <base_url> <login> <password>` (item 14).
 
 Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 
