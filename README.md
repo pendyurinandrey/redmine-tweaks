@@ -1,0 +1,68 @@
+# Redmine Tweaks
+
+Small quality-of-life improvements for Redmine. Every improvement is a separate, self-contained feature (its own JS/CSS,
+no core patches), so the plugin can grow without becoming hard to maintain.
+
+Requires Redmine 6.0 or newer. Tested on Redmine 6.1.4 with the default set of plugins and the [Opale](https://github.com/gagnieray/opale) theme, on desktop and phone widths.
+
+## Features
+
+### Quick edit description (v0.1.0)
+
+On an issue page a **pencil** appears next to the **Description** label. One click opens Redmine's edit form, expands the
+description editor (normally hidden behind a second "Edit" link), scrolls to it and puts the cursor at the end of the text.
+Issues without a description get a slim "Description ✎" row so a description can be added the same way.
+
+* Nothing is re-implemented: saving, preview, attachments, the version lock and the history are Redmine's own.
+* The pencil is shown **only to users who may edit the description** (the editor exists in the page only for them).
+* **Leaving the edit mode**
+  * **Esc** in a text field of the form: closes the form and restores the saved values; if something was changed, it asks first
+    (`Discard the unsaved changes?`). Esc is ignored while the @-mention menu is open (it closes the menu first).
+  * Redmine's own **Cancel** link: hides the form and keeps what was typed (as before).
+  * **Ctrl/Cmd+Enter** in any text area saves (this is Redmine core behavior).
+* Localized: English and Russian (`config/locales`); the texts reach the script from the server, other languages need only a YAML file.
+
+## Installation
+
+The repository is called `redmine-tweaks`, but the plugin directory **must be named exactly `redmine_tweaks`** (that is the plugin id), so give the target directory explicitly:
+
+```bash
+cd /path/to/redmine/plugins
+git clone --branch v0.1.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
+cd /path/to/redmine && bundle exec rake redmine:plugins:migrate RAILS_ENV=production   # the plugin has no migrations; safe to run
+```
+
+In a Docker image:
+
+```dockerfile
+RUN git clone --depth 1 --branch v0.1.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
+    && rm -rf plugins/redmine_tweaks/.git
+```
+
+Restart Redmine. Plugin JS/CSS is copied to the public assets on start; after changing them restart again and hard-refresh the browser.
+No configuration and no permissions are needed. To remove the plugin, delete the directory and restart.
+
+## Compatibility notes
+
+The script relies on a few internal identifiers of Redmine's issue page: `#update`, `#issue-form`, `#issue_description`,
+`#issue_description_and_toolbar`, `.description`, the global `showAndScrollTo()`. They have been stable for many releases, but after a
+major Redmine upgrade run the manual checklist below once.
+
+## Development and manual test checklist
+
+Any Redmine 6 works; the project's local stand mounts the working copy (`TWEAKS_DEV_DIR=/path/to/redmine-tweaks ./redmine.sh up`,
+then `./redmine.sh restart` after changes). Checklist (as a user with the *Member*-like role, then as a user who cannot edit issues):
+
+1. Issue with a description: the pencil is next to **Description**; a click opens the form, the editor is expanded, the caret is at the end.
+2. Type something, press **Esc** → confirmation; *Cancel* keeps the text, *OK* restores the saved text and closes the form.
+3. No changes, press **Esc** → closes without a question; the pencil takes the focus.
+4. **Cancel** link of the form still works (keeps the typed text); the pencil opens the form again with that text.
+5. **Ctrl/Cmd+Enter** saves; the description changes and appears in the history.
+6. Issue **without a description**: the "Description ✎" row exists and works.
+7. Links and task-list checkboxes inside the description behave as before (the pencil does not affect them).
+8. A user who can comment but not edit: **no pencil**.
+9. Narrow (phone) width and the Opale theme: the pencil is visible and tappable.
+
+## License
+
+[MIT](LICENSE).
