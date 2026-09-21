@@ -38,20 +38,30 @@ edit the description: a click flips that marker in the source and submits Redmin
 * Markers inside fenced code blocks and inline code are ignored, exactly as Redmine does not render them as checkboxes.
 * Localized (English, Russian) like the other messages.
 
+### Start page: "My page"
+
+By default `/` shows Redmine's "Home" page, which on a fresh installation is only a generic welcome text. With this feature a **logged-in user who opens `/`
+(or the "Home" link) is redirected to "My page"** (`/my/page`); logging in already lands there in stock Redmine, so the two now agree.
+
+* Anonymous visitors are not affected: with *Authentication required* they get the login page as before, on a site that allows anonymous access they see the normal home page.
+* Users who must change their password first are still sent to the password form (Redmine checks that before the redirect).
+* `robots.txt`, the API and every other route are untouched; only `WelcomeController#index` gets a `before_action`.
+* The column order of the blocks on "My page" is a built-in Redmine setting (block menu → *Options* → *Selected columns*), nothing to install for that.
+
 ## Installation
 
 The repository is called `redmine-tweaks`, but the plugin directory **must be named exactly `redmine_tweaks`** (that is the plugin id), so give the target directory explicitly:
 
 ```bash
 cd /path/to/redmine/plugins
-git clone --branch v0.1.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
+git clone --branch v0.2.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
 cd /path/to/redmine && bundle exec rake redmine:plugins:migrate RAILS_ENV=production   # the plugin has no migrations; safe to run
 ```
 
 In a Docker image:
 
 ```dockerfile
-RUN git clone --depth 1 --branch v0.1.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
+RUN git clone --depth 1 --branch v0.2.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
     && rm -rf plugins/redmine_tweaks/.git
 ```
 
@@ -83,6 +93,9 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
     saves, the page returns to the same scroll position, the right item changed, the history has "Description updated".
 11. Type a comment in the form, then click a checkbox: the click is reverted with a hint and nothing is sent.
 12. A user who may not edit the description, and a description whose markers cannot be mapped (an indented code block with `- [ ]`): the checkboxes stay disabled.
+13. Logged in, open `/`: you land on "My page". Logged out: the login page (or the home page if anonymous access is allowed).
+
+An HTTP-level check of item 13 for a running instance: `test/start_page_smoke.sh <base_url> <login> <password>`.
 
 Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 
