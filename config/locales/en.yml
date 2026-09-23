@@ -5,3 +5,4 @@ en:
   text_tweaks_x_weeks:
     one: "1 week"
     other: "%{count} weeks"
+  field_tweaks_not_planned: "Not planned"

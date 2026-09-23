@@ -6,3 +6,4 @@ ru:
   text_tweaks_x_weeks:
     one: "%{count} нед."
     other: "%{count} нед."
+  field_tweaks_not_planned: "Не запланировано"

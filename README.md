@@ -58,20 +58,33 @@ blocks' settings (for example the number of days of the "Spent time" block).
 * Values outside 1..5 are clamped; issues are selected for the whole displayed period and follow the usual visibility rules.
 * Localized (English, Russian).
 
+### "Not planned" issue filter
+
+Redmine's own filters can only be ANDed together, so "start date is blank OR due date is blank" cannot be built from two ordinary
+filters. This feature adds a single **Not planned** filter (Issues → Filters → *Add filter*) with values **Yes**/**No**: *Yes* matches
+issues where the start date, the due date, or both are missing; *No* matches issues where both are set.
+
+* Implemented the way Redmine's own core implements similar cases (`is_private`, `parent_id`, …): a "virtual" filter field
+  (`IssueQuery#initialize_available_filters` + `#sql_for_not_planned_field`), not a change to how filters are combined in general —
+  so it needs no changes anywhere else and combines with every other filter (Status, Project, …) exactly as usual.
+* Works wherever `IssueQuery` does: the issue list, a project's issue list, the REST API (`/issues.json?...&f[]=not_planned&op[not_planned]=%3D&v[not_planned][]=1`).
+* Can be saved as a query like any other filter combination (for example together with Status = open) for one-click reuse.
+* Localized (English, Russian).
+
 ## Installation
 
 The repository is called `redmine-tweaks`, but the plugin directory **must be named exactly `redmine_tweaks`** (that is the plugin id), so give the target directory explicitly:
 
 ```bash
 cd /path/to/redmine/plugins
-git clone --branch v0.2.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
+git clone --branch v0.3.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
 cd /path/to/redmine && bundle exec rake redmine:plugins:migrate RAILS_ENV=production   # the plugin has no migrations; safe to run
 ```
 
 In a Docker image:
 
 ```dockerfile
-RUN git clone --depth 1 --branch v0.2.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
+RUN git clone --depth 1 --branch v0.3.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
     && rm -rf plugins/redmine_tweaks/.git
 ```
 
@@ -84,7 +97,8 @@ The scripts rely on a few internal identifiers of Redmine's issue page: `#update
 `#issue_description_and_toolbar`, `#issue_description_wiki`, `.description`, the global `showAndScrollTo()`, and on the markup of task lists
 (`input.task-list-item-checkbox`). The start page feature adds a `before_action` to `WelcomeController#index`. The calendar feature **replaces** `MyHelper#render_calendar_block`
 (a copy of the core method plus the number of weeks; the core partial `my/blocks/_calendar` is no longer used) and wraps `Redmine::Helpers::Calendar#initialize`.
-They have been stable for many releases, but after a major Redmine upgrade compare `render_calendar_block` with the plugin's copy and run the manual checklist below once.
+The "Not planned" filter adds an `IssueQuery` filter field (`initialize_available_filters`, `sql_for_not_planned_field`) — a documented, stable Redmine extension point,
+not a patch of `Query#statement` itself. They have been stable for many releases, but after a major Redmine upgrade compare `render_calendar_block` with the plugin's copy and run the manual checklist below once.
 
 ## Development and manual test checklist
 
@@ -109,7 +123,10 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
 14. The Calendar block on "My page" has a gear button; choosing 3 weeks and saving shows three week rows without a page reload; an issue due in the third week appears only then.
     Removing and adding the block again keeps working.
 
-HTTP-level checks for a running instance (use a test account): `test/start_page_smoke.sh <base_url> <login> <password>` (item 13) and `test/calendar_weeks_smoke.sh <base_url> <login> <password>` (item 14).
+15. Issues → *Add filter* → **Not planned** appears; **Yes** shows issues missing a start date or a due date, **No** shows the rest; combines with Status as usual (AND).
+
+HTTP-level checks for a running instance (use a test account): `test/start_page_smoke.sh <base_url> <login> <password>` (item 13), `test/calendar_weeks_smoke.sh <base_url> <login> <password>` (item 14),
+`test/not_planned_filter_smoke.sh <base_url> <api_key> <project>` (item 15, needs a project with a mix of planned/unplanned/closed issues and an API key).
 
 Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 

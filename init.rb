@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 require_relative 'lib/redmine_tweaks/hooks'
+require_relative 'lib/redmine_tweaks/not_planned_filter'
 
 Redmine::Plugin.register :redmine_tweaks do
   name        'Redmine Tweaks'
   description 'Small quality-of-life improvements for Redmine (each one is a separate, self-contained feature)'
   url         'https://github.com/pendyurinandrey/redmine-tweaks'
   author      'Andrey Pendyurin'
-  version     '0.2.0'
+  version     '0.3.0'
 
   requires_redmine version_or_higher: '6.0.0'
 end
@@ -23,4 +24,9 @@ end
 unless Redmine::Helpers::Calendar.include?(RedmineTweaks::CalendarWeeks::CalendarPatch)
   Redmine::Helpers::Calendar.prepend(RedmineTweaks::CalendarWeeks::CalendarPatch)
   MyHelper.prepend(RedmineTweaks::CalendarWeeks::MyHelperPatch)
+end
+
+# Feature "not planned" filter: an issue-list filter for issues missing a start date or a due date.
+unless IssueQuery.include?(RedmineTweaks::NotPlannedFilter)
+  IssueQuery.prepend(RedmineTweaks::NotPlannedFilter)
 end
