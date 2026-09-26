@@ -7,3 +7,14 @@ ru:
     one: "%{count} нед."
     other: "%{count} нед."
   field_tweaks_not_planned: "Не запланировано"
+  label_tweaks_planned_time: "Запланированное время"
+  label_tweaks_pt_norm: "Линия дневной нормы"
+  label_tweaks_pt_norm_hours: "часов в день"
+  text_tweaks_pt_planned: "Запланировано: %{hours}"
+  text_tweaks_pt_tasks: "Задач: %{count}"
+  text_tweaks_pt_without_estimate: "Без оценки: %{count}"
+  text_tweaks_pt_over_norm: "Сверх нормы на %{hours}"
+  text_tweaks_pt_multi_day: "Не учтено многодневных задач с оценкой: %{count} (%{hours}). Разбейте их на подзадачи на один день."
+  my:
+    blocks:
+      planned_time: "Запланированное время"

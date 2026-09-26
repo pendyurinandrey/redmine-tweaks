@@ -1,0 +1,20 @@
+/* Feature: "planned time" widget of My page. Pure CSS: bars, norm line and tooltips, no scripts. */
+.rt-planned { --rt-bar: #628db6; --rt-over: #d9534f; --rt-h: 150px; margin: 8px 4px 4px; }
+.rt-planned .rt-plot { position: relative; height: var(--rt-h); margin-top: 64px; border-bottom: 1px solid rgba(127,127,127,.5); }
+.rt-planned .rt-cols { position: absolute; inset: 0; display: flex; gap: 6px; }
+.rt-planned a.rt-col { position: relative; flex: 1; display: flex; align-items: flex-end; text-decoration: none; }
+.rt-planned a.rt-col:hover, .rt-planned a.rt-col:focus { background: rgba(127,127,127,.12); outline: none; }
+.rt-planned .rt-bar { display: block; width: 100%; min-height: 0; background: var(--rt-bar); border-radius: 3px 3px 0 0; }
+.rt-planned .rt-bar.rt-over { background: var(--rt-over); }
+.rt-planned .rt-norm { position: absolute; left: 0; right: 0; border-top: 2px dashed rgba(127,127,127,.9); pointer-events: none; z-index: 1; }
+.rt-planned .rt-norm span { position: absolute; right: 0; bottom: 1px; font-size: .8em; opacity: .75; }
+.rt-planned .rt-tip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 5; width: max-content; max-width: 240px; padding: 6px 8px; border-radius: 4px; background: #333; color: #fff; font-size: .85em; line-height: 1.4; text-align: left; white-space: normal; }
+.rt-planned a.rt-col:hover .rt-tip, .rt-planned a.rt-col:focus .rt-tip { display: block; }
+.rt-planned a.rt-col.rt-first .rt-tip { left: 0; transform: none; }
+.rt-planned a.rt-col.rt-last .rt-tip { left: auto; right: 0; transform: none; }
+.rt-planned .rt-labels { display: flex; gap: 6px; }
+.rt-planned .rt-label { flex: 1; text-align: center; font-size: .8em; padding-top: 2px; }
+.rt-planned .rt-label .rt-value { display: block; font-weight: bold; min-height: 1.2em; }
+.rt-planned .rt-label.rt-today { font-weight: bold; text-decoration: underline; }
+.rt-planned .rt-note { margin: 8px 0 0; font-size: .85em; opacity: .8; }
+@media (max-width: 600px) { .rt-planned .rt-cols, .rt-planned .rt-labels { gap: 2px; } .rt-planned .rt-label { font-size: .7em; } }

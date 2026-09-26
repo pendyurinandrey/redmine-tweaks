@@ -71,20 +71,33 @@ issues where the start date, the due date, or both are missing; *No* matches iss
 * Can be saved as a query like any other filter combination (for example together with Status = open) for one-click reuse.
 * Localized (English, Russian).
 
+### "Planned time" widget for My page
+
+A new **Planned time** block (My page → *Add*) draws a bar chart, one bar per day, starting with **today**: **7 days by default, 7 to 14 selectable** in the block's *Options*.
+A bar is the sum of *Estimated time* of the open issues whose **start date and due date both equal that day** (issues without an estimate, or with 0, add nothing).
+
+* **Hover** (or keyboard focus) shows a tooltip: the date, planned hours as a plain decimal (e.g. `5.5 h`), the number of issues, how many issues have **no estimate**, and by how much the day is over the norm.
+* **Click** a bar to open the issue list of that day (open issues with that start and due date, the assignee filter included).
+* **Options:** days (7-14), **assignee** (all by default, or one user), and an optional **daily norm line** (on by default, 8 hours, any value up to 24; untick to hide it). Days over the norm are drawn in red.
+* Only each issue's **own** estimate is summed (parents and subtasks are not added together). Closed issues and issues you cannot see are ignored. All days are treated as working days.
+* **Multi-day issues are not counted** (a start date different from the due date): the widget shows a note with how many such issues with an estimate fall into the period and their hours, so nothing disappears silently. Split them into one-day subtasks.
+* Pure server-rendered HTML/CSS: no scripts, no chart library. It is a Redmine "additional block": any partial in a plugin's `app/views/my/blocks/` becomes a My page block, so nothing is patched.
+* Localized (English, Russian).
+
 ## Installation
 
 The repository is called `redmine-tweaks`, but the plugin directory **must be named exactly `redmine_tweaks`** (that is the plugin id), so give the target directory explicitly:
 
 ```bash
 cd /path/to/redmine/plugins
-git clone --branch v0.3.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
+git clone --branch v0.4.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
 cd /path/to/redmine && bundle exec rake redmine:plugins:migrate RAILS_ENV=production   # the plugin has no migrations; safe to run
 ```
 
 In a Docker image:
 
 ```dockerfile
-RUN git clone --depth 1 --branch v0.3.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
+RUN git clone --depth 1 --branch v0.4.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
     && rm -rf plugins/redmine_tweaks/.git
 ```
 
@@ -124,9 +137,10 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
     Removing and adding the block again keeps working.
 
 15. Issues → *Add filter* → **Not planned** appears; **Yes** shows issues missing a start date or a due date, **No** shows the rest; combines with Status as usual (AND).
+16. My page → *Add* → **Planned time**: bars for today and the next 6 days; with issues whose start and due date are the same day, the bar height and the tooltip match their estimates; a closed issue, an issue of another assignee (when one is chosen) and a multi-day issue do not change the bars (the last one shows in the note); a click opens that day's issue list.
 
 HTTP-level checks for a running instance (use a test account): `test/start_page_smoke.sh <base_url> <login> <password>` (item 13), `test/calendar_weeks_smoke.sh <base_url> <login> <password>` (item 14),
-`test/not_planned_filter_smoke.sh <base_url> <api_key> <project>` (item 15, needs a project with a mix of planned/unplanned/closed issues and an API key).
+`test/not_planned_filter_smoke.sh <base_url> <api_key> <project>` (item 15, needs a project with a mix of planned/unplanned/closed issues and an API key) and `test/planned_time_smoke.sh <base_url> <login> <password>` (item 16, structure and settings only; the numbers depend on your data).
 
 Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 

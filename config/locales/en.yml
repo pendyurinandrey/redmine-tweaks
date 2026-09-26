@@ -6,3 +6,20 @@ en:
     one: "1 week"
     other: "%{count} weeks"
   field_tweaks_not_planned: "Not planned"
+  label_tweaks_planned_time: "Planned time"
+  label_tweaks_pt_norm: "Daily norm line"
+  label_tweaks_pt_norm_hours: "hours per day"
+  text_tweaks_pt_planned: "Planned: %{hours}"
+  text_tweaks_pt_tasks:
+    one: "Issues: 1"
+    other: "Issues: %{count}"
+  text_tweaks_pt_without_estimate:
+    one: "Without estimate: 1 issue"
+    other: "Without estimate: %{count} issues"
+  text_tweaks_pt_over_norm: "Over the norm by %{hours}"
+  text_tweaks_pt_multi_day:
+    one: "Not counted: 1 multi-day issue with an estimate (%{hours}). Split it into one-day subtasks."
+    other: "Not counted: %{count} multi-day issues with an estimate (%{hours}). Split them into one-day subtasks."
+  my:
+    blocks:
+      planned_time: "Planned time"

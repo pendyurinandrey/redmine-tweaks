@@ -1,0 +1,93 @@
+<%# Redmine Tweaks, feature "planned time": a My page block (registered automatically because it lives in my/blocks). %>
+<% pt = RedmineTweaks::PlannedTime.new(User.current, settings) %>
+<% fmt = lambda {|h| number_with_precision(h, :precision => 2, :strip_insignificant_zeros => true) } %>
+<% hours_label = lambda {|h| l(:label_f_hour_short, :value => fmt.call(h)) } %>
+
+<div class="contextual">
+  <%= link_to_function sprite_icon('settings', l(:label_options)), "$('##{block}-settings').toggle();", :class => 'icon-only icon-settings', :title => l(:label_options) %>
+</div>
+
+<h3><%= l(:label_tweaks_planned_time) %></h3>
+
+<div id="<%= block %>-settings" style="display:none;">
+  <%= form_tag(my_page_path, :remote => true) do %>
+    <div class="box">
+      <p>
+        <label><%= l(:label_day_plural).capitalize %>
+          <%= select_tag "settings[#{block}][days]",
+                options_for_select((RedmineTweaks::PlannedTime::MIN_DAYS..RedmineTweaks::PlannedTime::MAX_DAYS).to_a, pt.days),
+                :id => "#{block}-days", :size => 1 %>
+        </label>
+      </p>
+      <p>
+        <label><%= l(:field_assigned_to) %>
+          <%= select_tag "settings[#{block}][assignee_id]",
+                options_for_select([[l(:label_all), '']] +
+                                   [["<< #{l(:label_me)} >>", User.current.id.to_s]] +
+                                   User.active.visible.sorted.reject {|u| u.id == User.current.id}.map {|u| [u.name, u.id.to_s]},
+                                   pt.assignee_id.to_s),
+                :id => "#{block}-assignee", :size => 1 %>
+        </label>
+      </p>
+      <p>
+        <%= hidden_field_tag "settings[#{block}][norm_enabled]", '0', :id => nil %>
+        <label><%= check_box_tag "settings[#{block}][norm_enabled]", '1', pt.norm_enabled?, :id => "#{block}-norm-enabled" %>
+          <%= l(:label_tweaks_pt_norm) %></label>
+        <%= text_field_tag "settings[#{block}][norm_hours]", fmt.call(pt.norm_hours), :size => 4, :id => "#{block}-norm-hours" %>
+        <%= l(:label_tweaks_pt_norm_hours) %>
+      </p>
+    </div>
+    <p>
+      <%= submit_tag l(:button_save) %>
+      <%= link_to_function l(:button_cancel), "$('##{block}-settings').toggle();" %>
+    </p>
+  <% end %>
+</div>
+
+<div class="rt-planned" data-rt-days="<%= pt.days %>">
+  <div class="rt-plot">
+    <% if pt.norm_enabled? %>
+      <div class="rt-norm" data-hours="<%= pt.norm_hours.round(2) %>" style="bottom: <%= (pt.norm_hours / pt.scale_max * 100).round(2) %>%;">
+        <span><%= hours_label.call(pt.norm_hours) %></span>
+      </div>
+    <% end %>
+    <div class="rt-cols">
+      <% pt.day_list.each_with_index do |day, i| %>
+        <%
+          over = pt.norm_enabled? && day.hours > pt.norm_hours
+          filters = {:f => %w(status_id start_date due_date), :op => {:status_id => 'o', :start_date => '=', :due_date => '='},
+                     :v => {:start_date => [day.date.to_s], :due_date => [day.date.to_s]},
+                     :c => %w(project tracker status subject estimated_hours), :set_filter => 1, :sort => 'id'}
+          if pt.assignee_id
+            filters[:f] << 'assigned_to_id'
+            filters[:op][:assigned_to_id] = '='
+            filters[:v][:assigned_to_id] = [pt.assignee_id.to_s]
+          end
+          position = i < 2 ? 'rt-first' : (i >= pt.days - 2 ? 'rt-last' : '')
+        %>
+        <%= link_to issues_path(filters), :class => "rt-col #{position}", :'data-date' => day.date.to_s, :'data-hours' => day.hours.round(2),
+                    :'data-count' => day.count, :'data-without-estimate' => day.without_estimate do %>
+          <span class="rt-bar<%= ' rt-over' if over %>" style="height: <%= (day.hours / pt.scale_max * 100).round(2) %>%;"></span>
+          <span class="rt-tip" role="tooltip">
+            <strong><%= format_date(day.date) %></strong><br>
+            <%= l(:text_tweaks_pt_planned, :hours => hours_label.call(day.hours)) %><br>
+            <%= l(:text_tweaks_pt_tasks, :count => day.count) %>
+            <% if day.without_estimate > 0 %><br><%= l(:text_tweaks_pt_without_estimate, :count => day.without_estimate) %><% end %>
+            <% if over %><br><%= l(:text_tweaks_pt_over_norm, :hours => hours_label.call(day.hours - pt.norm_hours)) %><% end %>
+          </span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  <div class="rt-labels">
+    <% pt.day_list.each do |day| %>
+      <span class="rt-label<%= ' rt-today' if day.date == User.current.today %>">
+        <span class="rt-value"><%= day.hours > 0 ? fmt.call(day.hours) : '' %></span>
+        <%= ::I18n.t('date.abbr_day_names')[day.date.wday] %> <%= day.date.day %>
+      </span>
+    <% end %>
+  </div>
+  <% if pt.multi_day[:count] > 0 %>
+    <p class="rt-note"><%= l(:text_tweaks_pt_multi_day, :count => pt.multi_day[:count], :hours => hours_label.call(pt.multi_day[:hours])) %></p>
+  <% end %>
+</div>

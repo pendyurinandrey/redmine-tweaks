@@ -13,10 +13,14 @@ module RedmineTweaks
     # "clickable task-list checkboxes". Only the issue page needs the assets.
     def view_layouts_base_html_head(context)
       controller = context[:controller]
+      view = context[:hook_caller]
+      # "planned time" widget of My page (pure CSS, no scripts)
+      if controller.is_a?(MyController) && controller.action_name == 'page'
+        return view.stylesheet_link_tag('planned_time', plugin: 'redmine_tweaks')
+      end
       return '' unless controller.is_a?(IssuesController) && controller.action_name == 'show'
       return '' unless User.current.logged?
 
-      view = context[:hook_caller]
       texts = I18N_KEYS.transform_values { |key| I18n.t(key) }
       view.tag(:meta, name: 'redmine-tweaks', content: texts.to_json) +
         view.stylesheet_link_tag('redmine_tweaks', plugin: 'redmine_tweaks') +
