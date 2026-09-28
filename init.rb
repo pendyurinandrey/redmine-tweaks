@@ -8,7 +8,7 @@ Redmine::Plugin.register :redmine_tweaks do
   description 'Small quality-of-life improvements for Redmine (each one is a separate, self-contained feature)'
   url         'https://github.com/pendyurinandrey/redmine-tweaks'
   author      'Andrey Pendyurin'
-  version     '0.4.0'
+  version     '0.5.0'
 
   requires_redmine version_or_higher: '6.0.0'
 end
@@ -30,3 +30,8 @@ end
 unless IssueQuery.include?(RedmineTweaks::NotPlannedFilter)
   IssueQuery.prepend(RedmineTweaks::NotPlannedFilter)
 end
+
+# Feature "operational plan": My page widget listing open versions of every visible project, not one project's own
+# Roadmap (no core patch: the partial in app/views/my/blocks is a Redmine "additional block"). It reuses the core
+# partial versions/overview, which calls VersionsHelper methods MyController does not load by default.
+MyController.helper(VersionsHelper) unless MyController.respond_to?(:_helpers) && MyController._helpers.include?(VersionsHelper)

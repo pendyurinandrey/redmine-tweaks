@@ -20,6 +20,9 @@ en:
   text_tweaks_pt_multi_day:
     one: "Not counted: 1 multi-day issue with an estimate (%{hours}). Split it into one-day subtasks."
     other: "Not counted: %{count} multi-day issues with an estimate (%{hours}). Split them into one-day subtasks."
+  label_tweaks_roadmap: "Roadmap"
+  label_tweaks_roadmap_show_completed: "Show completed versions"
   my:
     blocks:
       planned_time: "Planned time"
+      roadmap: "Roadmap"

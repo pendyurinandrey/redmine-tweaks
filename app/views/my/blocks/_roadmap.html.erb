@@ -1,0 +1,50 @@
+<%# Redmine Tweaks, feature "operational plan": open versions across every visible project, not one project's Roadmap. %>
+<% rw = RedmineTweaks::RoadmapWidget.new(User.current, settings) %>
+
+<div class="contextual">
+  <%= link_to_function sprite_icon('settings', l(:label_options)), "$('##{block}-settings').toggle();", :class => 'icon-only icon-settings', :title => l(:label_options) %>
+</div>
+
+<h3><%= l(:label_tweaks_roadmap) %></h3>
+
+<div id="<%= block %>-settings" style="display:none;">
+  <%= form_tag(my_page_path, :remote => true) do %>
+    <div class="box">
+      <p>
+        <label><%= l(:label_project) %>
+          <%= select_tag "settings[#{block}][project_id]",
+                options_for_select([[l(:label_all), '']] + rw.projects.map {|p| [p.name, p.id.to_s]}, rw.project_id.to_s),
+                :id => "#{block}-project" %>
+        </label>
+      </p>
+      <p>
+        <%= hidden_field_tag "settings[#{block}][show_completed]", '0', :id => nil %>
+        <label><%= check_box_tag "settings[#{block}][show_completed]", '1', rw.show_completed?, :id => "#{block}-completed" %>
+          <%= l(:label_tweaks_roadmap_show_completed) %></label>
+      </p>
+    </div>
+    <p>
+      <%= submit_tag l(:button_save) %>
+      <%= link_to_function l(:button_cancel), "$('##{block}-settings').toggle();" %>
+    </p>
+  <% end %>
+</div>
+
+<% if rw.versions.empty? %>
+  <p class="nodata"><%= l(:label_no_data) %></p>
+<% else %>
+  <div id="roadmap" class="rt-roadmap">
+    <% rw.versions.each do |version| %>
+      <article class="version-article <%= version.css_classes %>">
+        <header>
+          <h4 class="icon icon-package version inline-flex">
+            <%= sprite_icon 'package' %>
+            <%= link_to_version version %>
+          </h4>
+          <span class="badge badge-status-<%= version.status %>"><%= l("version_status_#{version.status}") %></span>
+        </header>
+        <%= render :partial => 'versions/overview', :locals => {:version => version} %>
+      </article>
+    <% end %>
+  </div>
+<% end %>

@@ -15,6 +15,9 @@ ru:
   text_tweaks_pt_without_estimate: "Без оценки: %{count}"
   text_tweaks_pt_over_norm: "Сверх нормы на %{hours}"
   text_tweaks_pt_multi_day: "Не учтено многодневных задач с оценкой: %{count} (%{hours}). Разбейте их на подзадачи на один день."
+  label_tweaks_roadmap: "Оперативный план"
+  label_tweaks_roadmap_show_completed: "Показывать завершённые версии"
   my:
     blocks:
       planned_time: "Запланированное время"
+      roadmap: "Оперативный план"

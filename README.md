@@ -84,20 +84,32 @@ A bar is the sum of *Estimated time* of the open issues whose **start date and d
 * Pure server-rendered HTML/CSS: no scripts, no chart library. It is a Redmine "additional block": any partial in a plugin's `app/views/my/blocks/` becomes a My page block, so nothing is patched.
 * Localized (English, Russian).
 
+### "Roadmap" widget for My page
+
+A new **Roadmap** block (My page → *Add*) lists open versions across **every project you can see** — unlike a project's own Roadmap tab, which lists only that project's (and, if shared, its subprojects') versions — sorted by due date (versions
+without a due date last). Each version is shown the way Redmine's own Roadmap shows it: name (prefixed with its project, e.g. "Alpha - Sprint 3"), status badge, due date, progress bar,
+and a link to its filtered issue list — but compact, without the per-issue table.
+
+* **Options:** a project filter (all, or one specific project — its own versions only, sharing/subprojects roll-up is not involved) and a **show completed versions** checkbox (off by default, like Roadmap).
+* Reuses the core partial `versions/overview` as-is (no reimplementation of the progress bar or issue counts) and the core helper `link_to_version`/`format_version_name`, which already
+  prints "Project - Version" whenever there is no single "current project" — exactly the format used, with no extra code for it.
+* Permissions: only versions of projects where you have *View issues* are listed (the same permission Redmine's Roadmap itself requires), via `Version.visible`.
+* Localized (English, Russian).
+
 ## Installation
 
 The repository is called `redmine-tweaks`, but the plugin directory **must be named exactly `redmine_tweaks`** (that is the plugin id), so give the target directory explicitly:
 
 ```bash
 cd /path/to/redmine/plugins
-git clone --branch v0.4.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
+git clone --branch v0.5.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
 cd /path/to/redmine && bundle exec rake redmine:plugins:migrate RAILS_ENV=production   # the plugin has no migrations; safe to run
 ```
 
 In a Docker image:
 
 ```dockerfile
-RUN git clone --depth 1 --branch v0.4.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
+RUN git clone --depth 1 --branch v0.5.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
     && rm -rf plugins/redmine_tweaks/.git
 ```
 
@@ -111,7 +123,9 @@ The scripts rely on a few internal identifiers of Redmine's issue page: `#update
 (`input.task-list-item-checkbox`). The start page feature adds a `before_action` to `WelcomeController#index`. The calendar feature **replaces** `MyHelper#render_calendar_block`
 (a copy of the core method plus the number of weeks; the core partial `my/blocks/_calendar` is no longer used) and wraps `Redmine::Helpers::Calendar#initialize`.
 The "Not planned" filter adds an `IssueQuery` filter field (`initialize_available_filters`, `sql_for_not_planned_field`) — a documented, stable Redmine extension point,
-not a patch of `Query#statement` itself. They have been stable for many releases, but after a major Redmine upgrade compare `render_calendar_block` with the plugin's copy and run the manual checklist below once.
+not a patch of `Query#statement` itself. The "Roadmap" widget adds `VersionsHelper` to `MyController`'s helpers (`MyController.helper(VersionsHelper)`, standard Rails API) so its view can
+call the core partial `versions/overview`; nothing about `MyController` itself is changed. They have been stable for many releases, but after a major Redmine upgrade compare `render_calendar_block`
+with the plugin's copy, re-check that `versions/overview` still renders standalone (outside `VersionsController`), and run the manual checklist below once.
 
 ## Development and manual test checklist
 
@@ -138,9 +152,11 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
 
 15. Issues → *Add filter* → **Not planned** appears; **Yes** shows issues missing a start date or a due date, **No** shows the rest; combines with Status as usual (AND).
 16. My page → *Add* → **Planned time**: bars for today and the next 6 days; with issues whose start and due date are the same day, the bar height and the tooltip match their estimates; a closed issue, an issue of another assignee (when one is chosen) and a multi-day issue do not change the bars (the last one shows in the note); a click opens that day's issue list.
+17. My page → *Add* → **Roadmap**: open versions of every visible project appear, sorted by due date, in "Project - Version" form, each with a progress bar; a closed version is hidden until "show completed" is ticked; the project filter narrows the list to one project's own versions; a version's link opens its own page.
 
 HTTP-level checks for a running instance (use a test account): `test/start_page_smoke.sh <base_url> <login> <password>` (item 13), `test/calendar_weeks_smoke.sh <base_url> <login> <password>` (item 14),
-`test/not_planned_filter_smoke.sh <base_url> <api_key> <project>` (item 15, needs a project with a mix of planned/unplanned/closed issues and an API key) and `test/planned_time_smoke.sh <base_url> <login> <password>` (item 16, structure and settings only; the numbers depend on your data).
+`test/not_planned_filter_smoke.sh <base_url> <api_key> <project>` (item 15, needs a project with a mix of planned/unplanned/closed issues and an API key), `test/planned_time_smoke.sh <base_url> <login> <password>` (item 16, structure and settings only; the numbers depend on your data),
+and `test/roadmap_widget_smoke.sh <base_url> <login> <password>` (item 17, structure and settings only; needs at least one open version with a due date somewhere you can see).
 
 Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 
