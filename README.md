@@ -160,6 +160,13 @@ and `test/roadmap_widget_smoke.sh <base_url> <login> <password>` (item 17, struc
 
 Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 
+## Continuous integration
+
+`.github/workflows/test.yml` runs on every push and pull request to `main` (and can be triggered manually): the unit tests, and all five HTTP smoke
+tests above against a throwaway Redmine (the official `redmine:6` and `postgres:16-alpine` images, this checkout bind-mounted as the plugin directory — not the Dockerfile
+or compose file used for the real deployment, which live in a separate, private infrastructure repository). `test/ci_seed.rb` creates the admin login and the one project the
+smoke tests need; it is CI-only (no idempotency, wipes nothing — a throwaway container each run) and is not part of the manual checklist above.
+
 ## License
 
 [MIT](LICENSE).
