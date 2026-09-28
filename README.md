@@ -154,25 +154,33 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
 16. My page → *Add* → **Planned time**: bars for today and the next 6 days; with issues whose start and due date are the same day, the bar height and the tooltip match their estimates; a closed issue, an issue of another assignee (when one is chosen) and a multi-day issue do not change the bars (the last one shows in the note); a click opens that day's issue list.
 17. My page → *Add* → **Roadmap**: open versions of every visible project appear, sorted by due date, in "Project - Version" form, each with a progress bar; a closed version is hidden until "show completed" is ticked; the project filter narrows the list to one project's own versions; a version's link opens its own page.
 
-HTTP-level checks for a running instance (use a test account): `test/start_page_smoke.sh <base_url> <login> <password>` (item 13), `test/calendar_weeks_smoke.sh <base_url> <login> <password>` (item 14),
-`test/not_planned_filter_smoke.sh <base_url> <api_key> <project>` (item 15, needs a project with a mix of planned/unplanned/closed issues and an API key), `test/planned_time_smoke.sh <base_url> <login> <password>` (item 16, structure and settings only; the numbers depend on your data),
-and `test/roadmap_widget_smoke.sh <base_url> <login> <password>` (item 17, structure and settings only; needs at least one open version with a due date somewhere you can see).
+Automated checks for the last five items (13-17), run against Redmine's own test fixtures rather than a live instance — see "Continuous integration" below for how to run them:
+`test/integration/start_page_test.rb` (13), `test/integration/calendar_weeks_test.rb` (14), `test/integration/not_planned_filter_test.rb` (15), `test/unit/planned_time_test.rb` +
+`test/integration/planned_time_test.rb` (16), `test/unit/roadmap_widget_test.rb` + `test/integration/roadmap_widget_test.rb` (17).
 
-Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
+Unit tests for the JS parsing logic (no dependencies, Node 18+): `node --test test/*.test.js`.
 
 ## Continuous integration
 
-`.github/workflows/test.yml` runs on every push and pull request to `main` (and can be triggered manually), as three jobs:
+`.github/workflows/test.yml` runs on every push and pull request to `main` (and can be triggered manually), as two jobs:
 
-* **`unit`** — the unit tests (`node --test`).
-* **`smoke`** — all five HTTP smoke tests above against a throwaway Redmine (the official `redmine:6` and `postgres:16-alpine` images, this checkout bind-mounted as the plugin
-  directory — not the Dockerfile or compose file used for the real deployment, which live in a separate, private infrastructure repository). `test/ci_seed.rb` creates the admin
-  login and the one project the smoke tests need; it is CI-only (no idempotency, wipes nothing — a throwaway container each run) and is not part of the manual checklist above.
-* **`ruby-tests`** — in-process Rails/Minitest tests, run the standard way any Redmine plugin's tests are run: `bundle exec rake redmine:plugins:test NAME=redmine_tweaks RAILS_ENV=test`
-  (a task built into Redmine core), against the app's own test database and fixtures — no live server, no HTTP, no `ci_seed.rb`. The official image ships without the `test` gem
-  group and without a compiler, so the job adds both (`bundle config set without ''`, `apt-get install build-essential`) before `bundle install`. So far only
-  `test/integration/not_planned_filter_test.rb` (feature "not planned" filter) is written this way; the other four features are still only covered by their smoke script above —
-  ported one at a time as they're rewritten.
+* **`unit`** — the JS unit tests (`node --test`).
+* **`ruby-tests`** — the whole Ruby test suite (`test/unit`, `test/integration`), run the standard way any Redmine plugin's tests are run:
+  `bundle exec rake redmine:plugins:test NAME=redmine_tweaks RAILS_ENV=test` (a task built into Redmine core), in-process, against the app's own test database and fixtures — no
+  live server, no HTTP client, no custom seed script. The job boots an idle `redmine:6` container (official image, this checkout bind-mounted as the plugin directory — not the
+  Dockerfile or compose file used for the real deployment, which live in a separate, private infrastructure repository) against a `postgres:16-alpine` container, then migrates
+  the test database. The official image ships without the `test` gem group and without a compiler, so the job adds both (`bundle config set without ''`, `apt-get install
+  build-essential`) before `bundle install`.
+
+Run the same suite locally the same way, against any Redmine 6 checkout with this repository symlinked or copied into `plugins/redmine_tweaks`:
+
+```bash
+RAILS_ENV=test bundle exec rake db:migrate redmine:plugins:migrate
+RAILS_ENV=test bundle exec rake redmine:plugins:test NAME=redmine_tweaks
+```
+
+See "How to write a test for this plugin" in `CLAUDE.md` for the fixture-isolation pitfall every test here that looks across more than one project has to account for
+(Redmine's own core fixtures include public projects visible by default to any user), and for the writing conventions used throughout `test/unit` and `test/integration`.
 
 ## License
 
