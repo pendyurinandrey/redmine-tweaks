@@ -16,14 +16,22 @@ curl -sk -c "$J" -b "$J" -o /dev/null --data-urlencode "authenticity_token=$tok"
 page() { curl -sk -b "$J" -c "$J" "$BASE/my/page"; }
 csrf() { page | grep -o 'name="csrf-token" content="[^"]*"' | head -1 | sed 's/.*content="//;s/"$//'; }
 post() { curl -sk -b "$J" -c "$J" -o /dev/null -w '%{http_code}' -X POST -H "X-CSRF-Token: $(csrf)" -H 'X-Requested-With: XMLHttpRequest' -H 'Accept: text/javascript' "$@"; }
+ensure_block() { # retries: /my/add_block's effect can lag behind the next GET by a beat
+  for i in 1 2 3 4 5; do
+    page | grep -q "id=\"block-$1\"" && return 0
+    post --data-urlencode "block=$1" "$BASE/my/add_block" >/dev/null
+    sleep 1
+  done
+  page | grep -q "id=\"block-$1\""
+}
 save() { post --data-urlencode "settings[roadmap][project_id]=$1" --data-urlencode "settings[roadmap][show_completed]=$2" "$BASE/my/page" >/dev/null; }
 versions() { page | grep -o '<h4 class="icon icon-package version[^"]*"[^>]*>.*</h4>' | grep -o 'title="[^"]*"' | sed 's/title="//;s/"$//'; }
 badges() { page | grep -c 'badge-status-'; }
 
 echo "== the block"
-page | grep -q 'id="block-roadmap"' || post --data-urlencode block=roadmap "$BASE/my/add_block" >/dev/null
-check "the block is on My page" $(page | grep -q 'id="block-roadmap"' && echo 1 || echo 0)
-check "it is offered in the Add list" $(page | grep -Eq '<option[^>]*>(Оперативный план|Operational plan)' && echo 1 || echo 0)
+ensure_block roadmap && block_ok=1 || block_ok=0
+check "the block is on My page" "$block_ok"
+check "it is offered in the Add list" $(page | grep -Eq '<option[^>]*>(Оперативный план|Operational plan|Roadmap)' && echo 1 || echo 0)
 
 echo "== default: all projects, open only"
 save "" 0

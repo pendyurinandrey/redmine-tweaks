@@ -17,11 +17,19 @@ curl -sk -c "$J" -b "$J" -o /dev/null --data-urlencode "authenticity_token=$tok"
 page() { curl -sk -b "$J" -c "$J" "$BASE/my/page"; }
 csrf() { page | grep -o 'name="csrf-token" content="[^"]*"' | head -1 | sed 's/.*content="//;s/"$//'; }
 post() { curl -sk -b "$J" -c "$J" -o /dev/null -w '%{http_code}' -X POST -H "X-CSRF-Token: $(csrf)" -H 'X-Requested-With: XMLHttpRequest' -H 'Accept: text/javascript' "$@"; }
+ensure_block() { # retries: /my/add_block's effect can lag behind the next GET by a beat
+  for i in 1 2 3 4 5; do
+    page | grep -q "id=\"block-$1\"" && return 0
+    post --data-urlencode "block=$1" "$BASE/my/add_block" >/dev/null
+    sleep 1
+  done
+  page | grep -q "id=\"block-$1\""
+}
 weeks_rendered() { page | grep -o 'class="label-week"' | wc -l | tr -d ' '; }
 selected() { page | grep -o '<option selected="selected" value="[0-9]*">' | head -1 | grep -o 'value="[0-9]*"' | grep -o '[0-9]*'; }
 
 echo "== the Calendar block"
-page | grep -q 'id="block-calendar"' || post --data-urlencode block=calendar "$BASE/my/add_block" >/dev/null
+ensure_block calendar >/dev/null
 check "the Calendar block is on My page" $(page | grep -q 'id="block-calendar"' && echo 1 || echo 0)
 page | grep -q 'id="block-calendar-settings"\|id="calendar-settings"' && has_form=1 || has_form=0
 check "the block has the weeks settings form (Options)" $has_form

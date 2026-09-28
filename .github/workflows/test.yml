@@ -1,0 +1,80 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  unit:
+    name: Unit tests (node --test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: node --test test/*.test.js
+
+  smoke:
+    name: HTTP smoke tests against a real Redmine
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY_BASE: ci_secret_key_base_at_least_30_characters_long
+      ADMIN_PASSWORD: Ci-Test-Pass-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # A throwaway stack (not the docker-compose.yml used for the real deploy, which lives in the personal-infra
+      # repo): official postgres and redmine images, this checkout bind-mounted as the plugin directory.
+      - name: Start Postgres and Redmine
+        run: |
+          docker network create redmine-ci
+          docker run -d --name db --network redmine-ci \
+            -e POSTGRES_DB=redmine -e POSTGRES_USER=redmine -e POSTGRES_PASSWORD=redmine \
+            postgres:16-alpine
+          docker run -d --name redmine --network redmine-ci -p 3000:3000 \
+            -e REDMINE_DB_POSTGRES=db -e REDMINE_DB_DATABASE=redmine -e REDMINE_DB_USERNAME=redmine -e REDMINE_DB_PASSWORD=redmine \
+            -e REDMINE_SECRET_KEY_BASE="$SECRET_KEY_BASE" \
+            -e REDMINE_PLUGINS_MIGRATE=1 \
+            -v "$GITHUB_WORKSPACE:/usr/src/redmine/plugins/redmine_tweaks:ro" \
+            redmine:6
+
+      - name: Wait for Redmine to come up
+        run: |
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/login || true)
+            [ "$code" = 200 ] && exit 0
+            sleep 3
+          done
+          echo "Redmine did not come up in time"; docker logs redmine; exit 1
+
+      - name: Load Redmine's default data (trackers, statuses, priorities, roles)
+        run: docker exec -e SECRET_KEY_BASE="$SECRET_KEY_BASE" redmine sh -c 'bundle exec rake redmine:load_default_data REDMINE_LANG=en RAILS_ENV=production'
+
+      - name: Seed test data (see test/ci_seed.rb)
+        id: seed
+        run: |
+          output=$(docker exec -e SECRET_KEY_BASE="$SECRET_KEY_BASE" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" redmine \
+            sh -c 'bundle exec rails runner plugins/redmine_tweaks/test/ci_seed.rb RAILS_ENV=production')
+          echo "$output"
+          api_key=$(echo "$output" | grep -o 'api_key=[0-9a-f]*' | cut -d= -f2)
+          [ -n "$api_key" ] || { echo "could not read the API key from ci_seed.rb output"; exit 1; }
+          echo "api_key=$api_key" >> "$GITHUB_OUTPUT"
+
+      - name: test/start_page_smoke.sh
+        run: test/start_page_smoke.sh http://127.0.0.1:3000 admin "$ADMIN_PASSWORD"
+      - name: test/calendar_weeks_smoke.sh
+        run: test/calendar_weeks_smoke.sh http://127.0.0.1:3000 admin "$ADMIN_PASSWORD"
+      - name: test/not_planned_filter_smoke.sh
+        run: test/not_planned_filter_smoke.sh http://127.0.0.1:3000 "${{ steps.seed.outputs.api_key }}" ci-test
+      - name: test/planned_time_smoke.sh
+        run: test/planned_time_smoke.sh http://127.0.0.1:3000 admin "$ADMIN_PASSWORD"
+      - name: test/roadmap_widget_smoke.sh
+        run: test/roadmap_widget_smoke.sh http://127.0.0.1:3000 admin "$ADMIN_PASSWORD"
+
+      - name: Redmine logs (on failure)
+        if: failure()
+        run: docker logs redmine --tail 200
