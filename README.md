@@ -162,10 +162,17 @@ Unit tests for the parsing logic (no dependencies, Node 18+): `node --test test/
 
 ## Continuous integration
 
-`.github/workflows/test.yml` runs on every push and pull request to `main` (and can be triggered manually): the unit tests, and all five HTTP smoke
-tests above against a throwaway Redmine (the official `redmine:6` and `postgres:16-alpine` images, this checkout bind-mounted as the plugin directory — not the Dockerfile
-or compose file used for the real deployment, which live in a separate, private infrastructure repository). `test/ci_seed.rb` creates the admin login and the one project the
-smoke tests need; it is CI-only (no idempotency, wipes nothing — a throwaway container each run) and is not part of the manual checklist above.
+`.github/workflows/test.yml` runs on every push and pull request to `main` (and can be triggered manually), as three jobs:
+
+* **`unit`** — the unit tests (`node --test`).
+* **`smoke`** — all five HTTP smoke tests above against a throwaway Redmine (the official `redmine:6` and `postgres:16-alpine` images, this checkout bind-mounted as the plugin
+  directory — not the Dockerfile or compose file used for the real deployment, which live in a separate, private infrastructure repository). `test/ci_seed.rb` creates the admin
+  login and the one project the smoke tests need; it is CI-only (no idempotency, wipes nothing — a throwaway container each run) and is not part of the manual checklist above.
+* **`ruby-tests`** — in-process Rails/Minitest tests, run the standard way any Redmine plugin's tests are run: `bundle exec rake redmine:plugins:test NAME=redmine_tweaks RAILS_ENV=test`
+  (a task built into Redmine core), against the app's own test database and fixtures — no live server, no HTTP, no `ci_seed.rb`. The official image ships without the `test` gem
+  group and without a compiler, so the job adds both (`bundle config set without ''`, `apt-get install build-essential`) before `bundle install`. So far only
+  `test/integration/not_planned_filter_test.rb` (feature "not planned" filter) is written this way; the other four features are still only covered by their smoke script above —
+  ported one at a time as they're rewritten.
 
 ## License
 

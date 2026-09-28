@@ -78,3 +78,65 @@ jobs:
       - name: Redmine logs (on failure)
         if: failure()
         run: docker logs redmine --tail 200
+
+  ruby-tests:
+    name: Ruby plugin tests (rake redmine:plugins:test)
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY_BASE: ci_secret_key_base_at_least_30_characters_long
+    steps:
+      - uses: actions/checkout@v4
+
+      # In-process Rails/Minitest tests (plugins/redmine_tweaks/test/{unit,functional,integration}), run against
+      # Redmine's own test fixtures via the standard `redmine:plugins:test` task -- no live server, no curl.
+      # The official image ships without the "test" gem group and without a compiler, so both are added here.
+      - name: Start Postgres and an idle Redmine container
+        run: |
+          docker network create redmine-ci
+          docker run -d --name db --network redmine-ci \
+            -e POSTGRES_DB=redmine -e POSTGRES_USER=redmine -e POSTGRES_PASSWORD=redmine \
+            postgres:16-alpine
+          mkdir -p /tmp/redmine-config
+          cat > /tmp/redmine-config/database.yml <<YAML
+          production:
+            adapter: postgresql
+            database: redmine
+            host: db
+            username: redmine
+            password: redmine
+            encoding: utf8
+          test:
+            adapter: postgresql
+            database: redmine_test
+            host: db
+            username: redmine
+            password: redmine
+            encoding: utf8
+          YAML
+          docker run -d --name redmine --network redmine-ci \
+            -v /tmp/redmine-config/database.yml:/usr/src/redmine/config/database.yml \
+            -v "$GITHUB_WORKSPACE:/usr/src/redmine/plugins/redmine_tweaks" \
+            redmine:6 tail -f /dev/null
+
+      - name: Create the test database
+        run: |
+          for i in $(seq 1 20); do docker exec db pg_isready -U redmine >/dev/null 2>&1 && break; sleep 2; done
+          docker exec db psql -U redmine -c "CREATE DATABASE redmine_test OWNER redmine;" postgres
+
+      - name: Install build tools and the full gem set (adds the "test" group)
+        run: |
+          docker exec -u root redmine sh -c 'apt-get update -qq && apt-get install -y -qq build-essential'
+          docker exec -u root redmine sh -c 'chmod -R o-w /usr/local/bundle' # bundler refuses to touch world-writable dirs
+          docker exec -u root redmine sh -c 'cd /usr/src/redmine && bundle config set without "" && bundle install'
+
+      - name: Migrate the test database and the plugin
+        run: |
+          docker exec -u root -e SECRET_KEY_BASE="$SECRET_KEY_BASE" redmine sh -c 'cd /usr/src/redmine && RAILS_ENV=test bundle exec rake db:migrate'
+          docker exec -u root -e SECRET_KEY_BASE="$SECRET_KEY_BASE" redmine sh -c 'cd /usr/src/redmine && RAILS_ENV=test bundle exec rake redmine:plugins:migrate'
+
+      - name: bundle exec rake redmine:plugins:test NAME=redmine_tweaks
+        run: docker exec -u root -e SECRET_KEY_BASE="$SECRET_KEY_BASE" redmine sh -c 'cd /usr/src/redmine && RAILS_ENV=test bundle exec rake redmine:plugins:test NAME=redmine_tweaks'
+
+      - name: Redmine logs (on failure)
+        if: failure()
+        run: docker logs redmine --tail 200
