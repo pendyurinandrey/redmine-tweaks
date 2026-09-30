@@ -21,3 +21,4 @@
 
 /* Feature: "roadmap" widget of My page -- the "estimated (open)" figure next to a version's closed/open counts. */
 .rt-roadmap-estimate { margin-left: .75em; opacity: .75; }
+@media (max-width: 600px) { .rt-roadmap-estimate { display: block; margin-left: 0; margin-top: .25em; } }
