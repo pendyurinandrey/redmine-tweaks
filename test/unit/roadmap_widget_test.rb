@@ -15,6 +15,8 @@ class RedmineTweaks::RoadmapWidgetTest < ActiveSupport::TestCase
     @project_a = Project.generate!(:is_public => false, :name => 'Alpha')
     @project_b = Project.generate!(:is_public => false, :name => 'Beta')
     [@project_a, @project_b].each { |p| User.add_to_project(@user, p, role) }
+    @project_a.trackers = [@tracker = Tracker.generate!]
+    @project_a.save!
     @today = @user.today
 
     @near   = Version.generate!(:project => @project_a, :name => 'A near',   :effective_date => @today + 5,  :status => 'open')
@@ -55,5 +57,22 @@ class RedmineTweaks::RoadmapWidgetTest < ActiveSupport::TestCase
     User.add_to_project(@user, other, Role.generate!(:permissions => [:view_issues]))
     assert_not_includes widget.projects.map(&:id), other.id, 'a project with no versions should not be offered in the filter'
     assert_includes widget.projects.map(&:id), @project_a.id
+  end
+
+  def test_open_estimated_hours_sums_only_the_not_closed_issues
+    Issue.generate!(:project => @project_a, :tracker => @tracker, :author => @user, :fixed_version => @near, :estimated_hours => 5)
+    Issue.generate!(:project => @project_a, :tracker => @tracker, :author => @user, :fixed_version => @near, :estimated_hours => 3.5)
+    closed = Issue.generate!(:project => @project_a, :tracker => @tracker, :author => @user, :fixed_version => @near, :estimated_hours => 8)
+    closed.update_column(:status_id, IssueStatus.where(:is_closed => true).first.id)
+
+    assert_equal 8.5, RedmineTweaks::RoadmapWidget.open_estimated_hours(@near)
+  end
+
+  def test_open_estimated_hours_is_zero_for_a_version_without_open_issues
+    assert_equal 0, RedmineTweaks::RoadmapWidget.open_estimated_hours(@nodate), 'no issues at all'
+
+    closed = Issue.generate!(:project => @project_a, :tracker => @tracker, :author => @user, :fixed_version => @nodate, :estimated_hours => 4)
+    closed.update_column(:status_id, IssueStatus.where(:is_closed => true).first.id)
+    assert_equal 0, RedmineTweaks::RoadmapWidget.open_estimated_hours(@nodate), 'only a closed issue'
   end
 end

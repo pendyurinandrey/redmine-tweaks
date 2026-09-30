@@ -18,3 +18,6 @@
 .rt-planned .rt-label.rt-today { font-weight: bold; text-decoration: underline; }
 .rt-planned .rt-note { margin: 8px 0 0; font-size: .85em; opacity: .8; }
 @media (max-width: 600px) { .rt-planned .rt-cols, .rt-planned .rt-labels { gap: 2px; } .rt-planned .rt-label { font-size: .7em; } }
+
+/* Feature: "roadmap" widget of My page -- the "estimated (open)" figure next to a version's closed/open counts. */
+.rt-roadmap-estimate { margin-left: .75em; opacity: .75; }

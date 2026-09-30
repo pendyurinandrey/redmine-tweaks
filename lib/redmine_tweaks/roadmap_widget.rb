@@ -33,5 +33,11 @@ module RedmineTweaks
         scope.to_a.sort_by {|v| [v.effective_date ? 0 : 1, v.effective_date || v.created_on, v.name]}
       end
     end
+
+    # Sum of "Estimated time" of the version's visible issues that are not closed (any non-closed status counts,
+    # same "open" flag the progress bar's own open/closed counts already use).
+    def self.open_estimated_hours(version)
+      version.visible_fixed_issues.open.sum(:estimated_hours) || 0.0
+    end
   end
 end

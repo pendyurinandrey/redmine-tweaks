@@ -91,8 +91,10 @@ without a due date last). Each version is shown the way Redmine's own Roadmap sh
 and a link to its filtered issue list — but compact, without the per-issue table.
 
 * **Options:** a project filter (all, or one specific project — its own versions only, sharing/subprojects roll-up is not involved) and a **show completed versions** checkbox (off by default, like Roadmap).
-* Reuses the core partial `versions/overview` as-is (no reimplementation of the progress bar or issue counts) and the core helper `link_to_version`/`format_version_name`, which already
-  prints "Project - Version" whenever there is no single "current project" — exactly the format used, with no extra code for it.
+* Next to the closed/open issue counts, an **"Estimated (open)"** figure shows the sum of *Estimated time* of that version's issues that are **not closed** (any status without the "closed" flag — the same flag the progress bar's own open/closed split already uses), `0 h` when there is nothing to sum.
+* Uses the core helper `link_to_version`/`format_version_name`, which already prints "Project - Version" whenever there is no single "current project" — exactly the format used, with no extra code for it.
+  The progress bar and issue counts are a local copy of the core partial `versions/overview` (plus the estimate figure) rather than that partial reused as-is: overriding it globally would also
+  change the real Roadmap page and the version page, which this feature never asked for.
 * Permissions: only versions of projects where you have *View issues* are listed (the same permission Redmine's Roadmap itself requires), via `Version.visible`.
 * Localized (English, Russian).
 
@@ -102,14 +104,14 @@ The repository is called `redmine-tweaks`, but the plugin directory **must be na
 
 ```bash
 cd /path/to/redmine/plugins
-git clone --branch v0.5.0 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
+git clone --branch v0.5.1 https://github.com/pendyurinandrey/redmine-tweaks.git redmine_tweaks
 cd /path/to/redmine && bundle exec rake redmine:plugins:migrate RAILS_ENV=production   # the plugin has no migrations; safe to run
 ```
 
 In a Docker image:
 
 ```dockerfile
-RUN git clone --depth 1 --branch v0.5.0 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
+RUN git clone --depth 1 --branch v0.5.1 https://github.com/pendyurinandrey/redmine-tweaks.git plugins/redmine_tweaks \
     && rm -rf plugins/redmine_tweaks/.git
 ```
 
@@ -124,8 +126,9 @@ The scripts rely on a few internal identifiers of Redmine's issue page: `#update
 (a copy of the core method plus the number of weeks; the core partial `my/blocks/_calendar` is no longer used) and wraps `Redmine::Helpers::Calendar#initialize`.
 The "Not planned" filter adds an `IssueQuery` filter field (`initialize_available_filters`, `sql_for_not_planned_field`) — a documented, stable Redmine extension point,
 not a patch of `Query#statement` itself. The "Roadmap" widget adds `VersionsHelper` to `MyController`'s helpers (`MyController.helper(VersionsHelper)`, standard Rails API) so its view can
-call the core partial `versions/overview`; nothing about `MyController` itself is changed. They have been stable for many releases, but after a major Redmine upgrade compare `render_calendar_block`
-with the plugin's copy, re-check that `versions/overview` still renders standalone (outside `VersionsController`), and run the manual checklist below once.
+call helpers like `version_filtered_issues_path`; nothing about `MyController` itself is changed. Its progress-bar markup is its own copy of the core partial `versions/overview`, kept in
+`app/views/my/blocks/_roadmap.html.erb` rather than overriding that partial globally. They have been stable for many releases, but after a major Redmine upgrade compare both
+`render_calendar_block` and that copy against core's current versions, and run the manual checklist below once.
 
 ## Development and manual test checklist
 
@@ -152,7 +155,7 @@ then `./redmine.sh restart` after changes). Checklist (as a user with the *Membe
 
 15. Issues → *Add filter* → **Not planned** appears; **Yes** shows issues missing a start date or a due date, **No** shows the rest; combines with Status as usual (AND).
 16. My page → *Add* → **Planned time**: bars for today and the next 6 days; with issues whose start and due date are the same day, the bar height and the tooltip match their estimates; a closed issue, an issue of another assignee (when one is chosen) and a multi-day issue do not change the bars (the last one shows in the note); a click opens that day's issue list.
-17. My page → *Add* → **Roadmap**: open versions of every visible project appear, sorted by due date, in "Project - Version" form, each with a progress bar; a closed version is hidden until "show completed" is ticked; the project filter narrows the list to one project's own versions; a version's link opens its own page.
+17. My page → *Add* → **Roadmap**: open versions of every visible project appear, sorted by due date, in "Project - Version" form, each with a progress bar; a closed version is hidden until "show completed" is ticked; the project filter narrows the list to one project's own versions; a version's link opens its own page; next to the closed/open counts, "Estimated (open)" shows the sum of estimated time of that version's not-closed issues (closed issues are excluded, `0 h` for a version with none).
 
 Automated checks for the last five items (13-17), run against Redmine's own test fixtures rather than a live instance — see "Continuous integration" below for how to run them:
 `test/integration/start_page_test.rb` (13), `test/integration/calendar_weeks_test.rb` (14), `test/integration/not_planned_filter_test.rb` (15), `test/unit/planned_time_test.rb` +

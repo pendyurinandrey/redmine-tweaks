@@ -22,6 +22,7 @@ en:
     other: "Not counted: %{count} multi-day issues with an estimate (%{hours}). Split them into one-day subtasks."
   label_tweaks_roadmap: "Roadmap"
   label_tweaks_roadmap_show_completed: "Show completed versions"
+  label_tweaks_roadmap_open_estimate: "Estimated (open): %{hours}"
   my:
     blocks:
       planned_time: "Planned time"

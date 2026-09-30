@@ -15,6 +15,11 @@ class RedmineTweaks::RoadmapWidgetIntegrationTest < Redmine::IntegrationTest
     User.add_to_project(@user, @project, role)
     @open   = Version.generate!(:project => @project, :name => 'Open version',   :effective_date => @user.today + 5, :status => 'open')
     @closed = Version.generate!(:project => @project, :name => 'Closed version', :status => 'closed')
+    @project.trackers = [tracker = Tracker.generate!]
+    @project.save!
+    Issue.generate!(:project => @project, :tracker => tracker, :author => @user, :fixed_version => @open, :estimated_hours => 5)
+    closed_issue = Issue.generate!(:project => @project, :tracker => tracker, :author => @user, :fixed_version => @open, :estimated_hours => 8)
+    closed_issue.update_column(:status_id, IssueStatus.where(:is_closed => true).first.id)
     User.current = nil
 
     log_user(@user.login, 'Roadmap-Test-2026')
@@ -37,6 +42,17 @@ class RedmineTweaks::RoadmapWidgetIntegrationTest < Redmine::IntegrationTest
     get '/my/page'
     assert_select '.version-article', 2
     assert_select '.badge-status-closed', 1
+  end
+
+  def test_shows_the_estimated_open_hours_next_to_the_closed_open_counts
+    get '/my/page'
+    assert_select '.rt-roadmap-estimate', :text => /5(\.0|,0)? h/, :count => 1
+
+    User.current = @user
+    Version.generate!(:project => @project, :name => 'No issues', :status => 'open')
+    User.current = nil
+    get '/my/page'
+    assert_select '.rt-roadmap-estimate', :text => /0 h/
   end
 
   def test_a_version_s_own_link_opens
